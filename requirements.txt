@@ -1,0 +1,9 @@
+# 视频转 MP3 助手 · 依赖
+# 安装：pip install -r requirements.txt
+
+PySide6==6.11.2
+yt-dlp==2026.8.19
+mutagen==1.48.1
+psutil==7.2.2
+imageio-ffmpeg==0.6.0
+pyinstaller==6.11.1

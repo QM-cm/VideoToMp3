@@ -1,0 +1,15 @@
+{
+  "output_dir": "output",
+  "bitrate_kbps": 192,
+  "sample_rate": 44100,
+  "name_template": "{artist} - {title}.mp3",
+  "concurrency": 1,
+  "ffmpeg_path": "",
+  "auto_import": true,
+  "device_music_dir": "MUSIC",
+  "embed_cover": true,
+  "gen_playlist": false,
+  "safe_eject": false,
+  "normalize_loudness": false,
+  "clipboard_autodetect": true
+}

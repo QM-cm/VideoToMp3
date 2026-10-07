@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 构建产物（不传，太大）
+build/
+dist/
+*.spec
+
+# 运行时数据（用户本地生成）
+data/
+!data/.gitkeep
+
+# 临时下载的 ffmpeg
+tools/
+
+# IDE
+.vscode/
+.idea/
+
+# 系统
+Thumbs.db
+.DS_Store

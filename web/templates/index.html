@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>视频转 MP3 助手</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #8FD0F5 0%, #DCEEFB 100%);
+    color: #2F3E46;
+    padding: 20px;
+  }
+  .container { max-width: 760px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 24px; padding-top: 10px; }
+  .header h1 { color: #2456A6; font-size: 26px; letter-spacing: 2px; }
+  .header p { color: #5B7A99; font-size: 13px; margin-top: 6px; }
+  .card {
+    background: rgba(255,255,255,0.92);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 18px rgba(36,86,166,0.12);
+  }
+  textarea, select, input {
+    width: 100%;
+    border: 1.5px solid #D0E3F5;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    background: #fff;
+    color: #2F3E46;
+    outline: none;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  textarea:focus, select:focus, input:focus { border-color: #3D8BD9; }
+  .row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 120px; }
+  label { font-size: 12px; color: #5B7A99; display: block; margin-bottom: 4px; }
+  button {
+    background: linear-gradient(180deg, #6FB8F0, #3D8BD9);
+    color: #fff; border: none; border-radius: 12px;
+    padding: 12px 28px; font-size: 15px; font-weight: 700;
+    cursor: pointer; width: 100%; margin-top: 14px;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { background: #B9D6EE; cursor: not-allowed; }
+  .info {
+    background: #F4F9FE; border-radius: 10px; padding: 12px 14px;
+    margin-top: 12px; font-size: 13px; line-height: 1.7; display: none;
+  }
+  .info.show { display: block; }
+  .progress-wrap { background: #E4EFF9; border-radius: 6px; height: 10px; margin-top: 10px; overflow: hidden; display: none; }
+  .progress-wrap.show { display: block; }
+  .progress-bar {
+    background: linear-gradient(90deg, #6FB8F0, #3D8BD9);
+    height: 100%; width: 0%; transition: width 0.3s; border-radius: 6px;
+  }
+  .status-text { font-size: 12px; color: #5B7A99; margin-top: 6px; }
+  .download-btn {
+    display: inline-block; margin-top: 12px;
+    background: #2456A6; color: #fff; padding: 10px 22px;
+    border-radius: 10px; text-decoration: none; font-weight: 600;
+  }
+  .err { color: #D9534F; }
+  .footer { text-align: center; font-size: 11px; color: #7A99B5; margin-top: 20px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>♪ 视频转 MP3 助手</h1>
+    <p>粘贴链接 · 自动转音频 · 写好封面标签</p>
+  </div>
+
+  <div class="card">
+    <label>视频链接（支持 B站 / YouTube / 抖音 / 快手）</label>
+    <textarea id="url" placeholder="粘贴视频链接…"></textarea>
+
+    <div class="row">
+      <div>
+        <label>音质</label>
+        <select id="quality">
+          <option value="standard">普通 128k</option>
+          <option value="high" selected>高频 320k</option>
+          <option value="lossless">无损 FLAC</option>
+        </select>
+      </div>
+      <div>
+        <label>开始时间（mm:ss，可空）</label>
+        <input id="start" placeholder="00:00">
+      </div>
+      <div>
+        <label>结束时间（可空）</label>
+        <input id="end" placeholder="留空=到结尾">
+      </div>
+    </div>
+
+    <button id="btn">▶ 开始转换</button>
+
+    <div class="info" id="info"></div>
+    <div class="progress-wrap" id="pwrap"><div class="progress-bar" id="pbar"></div></div>
+    <div class="status-text" id="stext"></div>
+  </div>
+
+  <div class="footer">
+    仅处理你有权下载的公开视频 · 不绕过 DRM / 会员 / 登录限制<br>
+    蔚蓝档案风格 · Beta
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let timer = null;
+
+$('btn').onclick = async () => {
+  const url = $('url').value.trim();
+  if (!url) { alert('请先粘贴链接'); return; }
+  $('btn').disabled = true;
+  $('btn').textContent = '转换中…';
+  $('info').classList.remove('show');
+  $('pwrap').classList.add('show');
+  $('pbar').style.width = '0%';
+  $('stext').textContent = '提交任务…';
+
+  try {
+    const r = await fetch('/api/convert', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        url, quality: $('quality').value,
+        start_time: $('start').value, end_time: $('end').value
+      })
+    });
+    const j = await r.json();
+    if (!j.ok) { throw new Error(j.error); }
+    poll(j.job_id);
+  } catch (e) {
+    fail(e.message);
+  }
+};
+
+function poll(jid) {
+  timer = setInterval(async () => {
+    try {
+      const r = await fetch('/api/status/' + jid);
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error);
+      $('pbar').style.width = j.progress + '%';
+      $('stext').textContent = '状态: ' + j.status + ' · ' + j.progress + '%';
+      if (j.title) {
+        $('info').innerHTML = `<b>${j.title}</b><br>UP主: ${j.artist || '—'}`;
+        $('info').classList.add('show');
+      }
+      if (j.status === 'done') {
+        clearInterval(timer);
+        $('pbar').style.width = '100%';
+        $('stext').textContent = '完成！';
+        $('info').innerHTML += `<br><a class="download-btn" href="/api/download/${jid}">💾 下载文件</a>`;
+        $('info').classList.add('show');
+        reset();
+      } else if (j.status === 'failed') {
+        clearInterval(timer);
+        fail(j.error || '转换失败');
+      }
+    } catch (e) { fail(e.message); }
+  }, 1200);
+}
+
+function fail(msg) {
+  clearInterval(timer);
+  $('info').innerHTML = `<span class="err">❌ ${msg}</span>`;
+  $('info').classList.add('show');
+  reset();
+}
+function reset() {
+  $('btn').disabled = false;
+  $('btn').textContent = '▶ 开始转换';
+}
+</script>
+</body>
+</html>
